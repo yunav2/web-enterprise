@@ -1,4 +1,3 @@
-
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%
   // Contoh: pastikan session sudah ada atribut "username" saat user login
@@ -81,6 +80,12 @@
           <li class="nav-item">
             <a class="nav-link" href="#" data-tab="data-user">Data User</a>
           </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#" data-tab="data-barang">Data Barang</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#" data-tab="data-transaksi">Data Transaksi</a>
+          </li>
         </ul>
         <form class="d-flex" role="search" onsubmit="return false;">
           <input class="form-control me-2 search-bar" type="search" placeholder="Search" aria-label="Search" />
@@ -114,6 +119,16 @@
       <div id="data-user" class="tab-pane" style="display:none;">
         <iframe src="../data/data-user.jsp" style="width:100%; height:600px; border:none;"></iframe>
       </div>
+
+      <!-- Data Barang Tab -->
+      <div id="data-barang" class="tab-pane" style="display:none;">
+        <iframe src="../data/data-barang.jsp" style="width:100%; height:600px; border:none;"></iframe>
+      </div>
+
+      <!-- Data Transaksi Tab -->
+      <div id="data-transaksi" class="tab-pane" style="display:none;">
+        <iframe src="../data/data-transaksi.jsp" style="width:100%; height:600px; border:none;"></iframe>
+      </div>
     </div>
   </div>
 
@@ -131,7 +146,10 @@
         // Activate clicked tab
         this.classList.add('active');
         const tabId = this.getAttribute('data-tab');
-        document.getElementById(tabId).style.display = 'block';
+        const tabPane = document.getElementById(tabId);
+        if (tabPane) {
+          tabPane.style.display = 'block';
+        }
       });
     });
   </script>
