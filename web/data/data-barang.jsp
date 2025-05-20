@@ -1,87 +1,5 @@
 <%@ page contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
-<%@ page import="java.sql.*, java.io.*, java.nio.file.Paths" %>
-<%@ page import="jakarta.servlet.http.Part" %>
-<%
-  // Proses form submit tambah barang
-  if ("POST".equalsIgnoreCase(request.getMethod())) {
-    request.setCharacterEncoding("UTF-8");
-
-    // Ambil parameter dengan null-safe dan trim
-    String nama_barang = request.getParameter("nama_barang");
-    String harga_barang = request.getParameter("harga_barang");
-    String stok_barang = request.getParameter("stok_barang");
-
-    if (nama_barang != null) nama_barang = nama_barang.trim();
-    else nama_barang = "";
-
-    if (harga_barang != null) harga_barang = harga_barang.trim();
-    else harga_barang = "";
-
-    if (stok_barang != null) stok_barang = stok_barang.trim();
-    else stok_barang = "";
-
-    String errorMsg = null;
-    String fileName = null;
-
-    // Validasi input sederhana (tidak boleh kosong atau hanya spasi)
-    if (nama_barang.isEmpty()) {
-      errorMsg = "Nama barang harus diisi!";
-    } else if (harga_barang.isEmpty()) {
-      errorMsg = "Harga barang harus diisi!";
-    } else if (stok_barang.isEmpty()) {
-      errorMsg = "Stok barang harus diisi!";
-    }
-
-    // Jika validasi sukses, proses upload gambar (jika ada)
-    if (errorMsg == null) {
-      try {
-        Part filePart = request.getPart("gambar_barang");
-        if (filePart != null && filePart.getSize() > 0) {
-          fileName = Paths.get(filePart.getSubmittedFileName()).getFileName().toString();
-          String uploadPath = application.getRealPath("") + "uploads/";
-          java.io.File uploadDir = new java.io.File(uploadPath);
-          if (!uploadDir.exists()) uploadDir.mkdir();
-          filePart.write(uploadPath + fileName);
-        }
-      } catch (Exception e) {
-        errorMsg = "Gagal upload gambar: " + e.getMessage();
-      }
-    }
-
-    // Simpan data ke database jika tidak ada error
-    if (errorMsg == null) {
-      Connection conn = null;
-      PreparedStatement ps = null;
-      try {
-        Class.forName("com.mysql.cj.jdbc.Driver");
-        conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/yuna?autoReconnect=true&useSSL=false", "root", "");
-        String sql = "INSERT INTO barang (nama_barang, harga_barang, stok_barang, gambar_barang) VALUES (?, ?, ?, ?)";
-        ps = conn.prepareStatement(sql);
-        ps.setString(1, nama_barang);
-        ps.setString(2, harga_barang);
-        ps.setString(3, stok_barang);
-        ps.setString(4, fileName != null ? "uploads/" + fileName : null);
-        ps.executeUpdate();
-
-        // Redirect agar form tidak submit ulang saat refresh
-        response.sendRedirect("data-barang.jsp");
-        return;
-      } catch (Exception e) {
-        errorMsg = "Error simpan data: " + e.getMessage();
-      } finally {
-        if (ps != null) try { ps.close(); } catch(Exception e) {}
-        if (conn != null) try { conn.close(); } catch(Exception e) {}
-      }
-    }
-
-    // Jika ada error, tampilkan alert
-    if (errorMsg != null) {
-%>
-      <script>alert("<%= errorMsg.replace("\"", "\\\"") %>");</script>
-<%
-    }
-  }
-%>
+<%@ page import="java.sql.*" %>
 <!DOCTYPE html>
 <html>
 <head>
@@ -127,6 +45,7 @@
       <tr>
         <th>No</th>
         <th>Nama Barang</th>
+        <th>Deskripsi Barang</th>
         <th>Harga Barang</th>
         <th>Stok Barang</th>
         <th>Gambar Barang</th>
@@ -142,13 +61,14 @@
 
       try {
         Class.forName("com.mysql.cj.jdbc.Driver");
-        conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/yuna?autoReconnect=true&useSSL=false", "root", "");
+        conn = DriverManager.getConnection("jdbc:mysql://localhost:3306/yuna?useSSL=false", "root", "");
         stmt = conn.createStatement();
         rs = stmt.executeQuery("SELECT * FROM barang");
 
-        while(rs.next()) {
-          String id = rs.getString("id");
+        while (rs.next()) {
+          String id = rs.getString("id_barang");
           String nama = rs.getString("nama_barang");
+          String deskripsi = rs.getString("deskripsi_barang");
           String harga = rs.getString("harga_barang");
           String stok = rs.getString("stok_barang");
           String gambar = rs.getString("gambar_barang");
@@ -156,6 +76,7 @@
       <tr>
         <td><%= no++ %></td>
         <td><%= nama %></td>
+        <td><%= deskripsi %></td>
         <td><%= harga %></td>
         <td><%= stok %></td>
         <td>
@@ -166,7 +87,7 @@
           <% } %>
         </td>
         <td>
-          <!-- Edit dan Delete bisa Anda buat terpisah -->
+          <!-- Tombol Edit dan Hapus -->
           <form action="update-barang.jsp" method="post" class="d-inline">
             <input type="hidden" name="id" value="<%= id %>" />
             <input type="hidden" name="nama_barang" value="<%= nama %>" />
@@ -184,12 +105,12 @@
       </tr>
     <%
         }
-      } catch(Exception e) {
-        out.println("<tr><td colspan='6' class='text-danger'>Error: " + e.getMessage() + "</td></tr>");
+      } catch (Exception e) {
+        out.println("<tr><td colspan='7' class='text-danger'>Error: " + e.getMessage() + "</td></tr>");
       } finally {
-        if (rs != null) try { rs.close(); } catch(Exception e) {}
-        if (stmt != null) try { stmt.close(); } catch(Exception e) {}
-        if (conn != null) try { conn.close(); } catch(Exception e) {}
+        if (rs != null) try { rs.close(); } catch (Exception e) {}
+        if (stmt != null) try { stmt.close(); } catch (Exception e) {}
+        if (conn != null) try { conn.close(); } catch (Exception e) {}
       }
     %>
     </tbody>
@@ -200,7 +121,7 @@
 <div class="modal fade" id="tambahBarangModal" tabindex="-1" aria-labelledby="tambahBarangModalLabel" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
-      <form action="data-barang.jsp" method="post" enctype="multipart/form-data" novalidate>
+      <form action="tambah-barang.jsp" method="post" enctype="multipart/form-data" novalidate>
         <div class="modal-header">
           <h5 class="modal-title" id="tambahBarangModalLabel">Tambah Barang Baru</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -209,6 +130,10 @@
           <div class="mb-3">
             <label for="nama_barang" class="form-label">Nama Barang</label>
             <input type="text" class="form-control" id="nama_barang" name="nama_barang" required />
+          </div>
+          <div class="mb-3">
+            <label for="deskripsi_barang" class="form-label">Deskripsi Barang</label>
+            <textarea class="form-control" id="deskripsi_barang" name="deskripsi_barang"></textarea>
           </div>
           <div class="mb-3">
             <label for="harga_barang" class="form-label">Harga Barang</label>
